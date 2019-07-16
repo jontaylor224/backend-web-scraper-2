@@ -6,6 +6,7 @@ import argparse
 import requests
 import re
 import sys
+from bs4 import BeautifulSoup
 
 
 def get_data(target_url):
@@ -16,14 +17,23 @@ def get_data(target_url):
 
 
 def parse_data(data):
-    '''takes URL text data and parses for URLs, email addresses, and phone numbers'''
-    urls = sorted(set(re.findall(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)))
+    '''takes URL text data and parses for URLs, email addresses, and phone numbers including links in <a> and <img> tags.'''
+    urls = re.findall(
+        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', data)
+    soup = BeautifulSoup(data, features='html.parser')
+    for a_link in soup.findAll('a'):
+        urls.append(a_link.get('href'))
+    for img_link in soup.findAll('img'):
+        urls.append(img_link.get('src'))
+    urls = sorted(set(urls))
+
     emails = sorted(set(re.findall(
         r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", data)))
+
     phone_numbers = set(re.findall(
         r'1?\W*([2-9][0-8][0-9])\W*([2-9][0-9]{2})\W*([0-9]{4})(\se?x?t?(\d*))?', data))
     formatted_numbers = sorted(format_phone_numbers(phone_numbers))
+
     print_data(urls, emails, formatted_numbers)
 
 
